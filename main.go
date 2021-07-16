@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -34,6 +35,7 @@ func main() {
 		Handler:      mux,
 	}
 
+	fmt.Printf("Starting server at :8080")
 	err := s.ListenAndServe()
 	if err != nil {
 		if err != http.ErrServerClosed {
