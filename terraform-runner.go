@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -8,38 +9,15 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	volumeTypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
-	// "github.com/docker/docker/pkg/stdcopy"
 )
 
 func terraformRunner() {
-	// tf :=
-	// 	`terraform {
-	// required_providers {
-	// 	docker = {
-	// 	source = "kreuzwerker/docker"
-	// 	}
-	// }
-	// }
-
-	// provider "docker" {}
-
-	// resource "docker_image" "nginx" {
-	// name         = "nginx:latest"
-	// keep_locally = false
-	// }
-
-	// resource "docker_container" "nginx" {
-	// image = docker_image.nginx.latest
-	// name  = "tutorial"
-	// ports {
-	// 	internal = 80
-	// 	external = 8000
-	// }
-	// }`
+	tf := []byte("terraform {\n\trequired_providers {\n\t\tdocker = {\n\t\tsource = \"kreuzwerker/docker\"\n\t\t}\n\t}\n\t}\n\n\tprovider \"docker\" {}\n\n\tresource \"docker_image\" \"nginx\" {\n\tname         = \"nginx:latest\"\n\tkeep_locally = false\n\t}\n\n\tresource \"docker_container\" \"nginx\" {\n\timage = docker_image.nginx.latest\n\tname  = \"tutorial\"\n\tports {\n\t\tinternal = 80\n\t\texternal = 8000\n\t}\n\t}\\n")
 
 	ctx := context.Background()
 	cli, err := client.NewEnvClient()
@@ -84,13 +62,71 @@ func terraformRunner() {
 	}
 
 	// sudo docker cp main.tf terraform:/app
+	r := bytes.NewReader(tf)
+	err = cli.CopyToContainer(ctx, resp.ID, "/app", r, types.CopyToContainerOptions{})
+	if err != nil {
+		panic(err)
+	}
+
 	// sudo docker exec -it terraform terraform  init
+	execResp, err := cli.ContainerExecCreate(ctx, resp.ID, types.ExecConfig{
+		AttachStdin: false,
+		Tty:         false,
+		WorkingDir:  "/app",
+		Cmd:         []string{"terraform", "init"},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = cli.ContainerExecStart(ctx, execResp.ID, types.ExecStartCheck{})
+	if err != nil {
+		panic(err)
+	}
+
 	// sudo docker exec -it terraform sh -c "terraform plan -no-color > output.txt"
-	// sudo docker cp terraform:/app/output.txt .
+	execResp, err = cli.ContainerExecCreate(ctx, resp.ID, types.ExecConfig{
+		AttachStdin: false,
+		Tty:         false,
+		WorkingDir:  "/app",
+		Cmd:         []string{"sh", "-c", "\"terraform plan -no-color > output.txt\""},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = cli.ContainerExecStart(ctx, execResp.ID, types.ExecStartCheck{})
+	if err != nil {
+		panic(err)
+	}
+
+	// sudo docker cp terraform:/app/output.txt
+	contents, _, err := cli.CopyFromContainer(ctx, resp.ID, "/app/output.txt")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(contents)
+
 	// sudo docker container stop terraform
-	// sudo docker container rm terraform
+	err = cli.ContainerStop(ctx, resp.ID, nil)
+	if err != nil {
+		fmt.Printf("Unable to stop container %s", resp.ID)
+		panic(err)
+	}
+
+	// sudo docker container prune
+	_, err = cli.ContainersPrune(ctx, filters.Args{})
+	if err != nil {
+		fmt.Printf("Unable to prune containers")
+		panic(err)
+	}
+
 	// sudo docker volume prune
-	fmt.Println(resp.ID)
+	_, err = cli.VolumesPrune(ctx, filters.Args{})
+	if err != nil {
+		fmt.Printf("Unable to prune volumes")
+		panic(err)
+	}
 
 	// statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 	// select {
