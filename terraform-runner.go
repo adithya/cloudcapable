@@ -92,11 +92,12 @@ func terraformRunner() {
 	}
 
 	// sudo docker exec -it terraform sh -c "terraform plan -no-color > output.txt"
-	execResp, err = cli.ContainerExecCreate(ctx, resp.ID, types.ExecConfig{
-		AttachStdin: false,
-		Tty:         false,
-		WorkingDir:  "/app",
-		Cmd:         []string{"sh", "-c", "\"terraform plan -no-color > output.txt\""},
+	execResp2, err := cli.ContainerExecCreate(ctx, resp.ID, types.ExecConfig{
+		AttachStdin:  false,
+		Tty:          true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          []string{"/bin/sh", "-c", "terraform plan -no-color | tee output.txt"},
 	})
 	if err != nil {
 		panic(err)
