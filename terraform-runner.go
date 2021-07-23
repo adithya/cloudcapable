@@ -62,8 +62,15 @@ func terraformRunner() {
 	}
 
 	// sudo docker cp main.tf terraform:/app
-	r := bytes.NewReader(tf)
-	err = cli.CopyToContainer(ctx, resp.ID, "/app", r, types.CopyToContainerOptions{})
+	options := cpConfig{
+		followLink: false,
+		copyUIDGID: false,
+		quiet:      false,
+		sourcePath: "terraformTestFiles/docker-nginx.tf",
+		destPath:   "app",
+		container:  resp.ID,
+	}
+	err = copyToContainer(ctx, cli, options)
 	if err != nil {
 		panic(err)
 	}
