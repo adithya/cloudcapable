@@ -77,10 +77,11 @@ func terraformRunner() {
 
 	// sudo docker exec -it terraform terraform  init
 	execResp, err := cli.ContainerExecCreate(ctx, resp.ID, types.ExecConfig{
-		AttachStdin: false,
-		Tty:         false,
-		WorkingDir:  "/app",
-		Cmd:         []string{"terraform", "init"},
+		AttachStdin:  false,
+		Tty:          true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          []string{"terraform", "init"},
 	})
 	if err != nil {
 		panic(err)
