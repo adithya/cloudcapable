@@ -87,10 +87,25 @@ func terraformRunner() {
 		panic(err)
 	}
 
-	err = cli.ContainerExecStart(ctx, execResp.ID, types.ExecStartCheck{})
+	attach, err := cli.ContainerExecAttach(ctx, execResp.ID, types.ExecStartCheck{})
 	if err != nil {
 		panic(err)
 	}
+
+	// make sure terraform init finishes before moving on
+	c := attach.Conn
+
+	one := make([]byte, 1)
+	_, err = c.Read(one)
+
+	for err != io.EOF {
+		fmt.Println("Waiting for terraform init to finish")
+		_, err = c.Read(one)
+	}
+
+	// logging
+	defer attach.Close()
+	go io.Copy(os.Stdout, attach.Reader)
 
 	// sudo docker exec -it terraform sh -c "terraform plan -no-color > output.txt"
 	execResp2, err := cli.ContainerExecCreate(ctx, resp.ID, types.ExecConfig{
@@ -104,10 +119,25 @@ func terraformRunner() {
 		panic(err)
 	}
 
-	err = cli.ContainerExecStart(ctx, execResp.ID, types.ExecStartCheck{})
+	attach2, err := cli.ContainerExecAttach(ctx, execResp2.ID, types.ExecStartCheck{})
 	if err != nil {
 		panic(err)
 	}
+
+	//make sure terraform plan finishes before moving on
+	c = attach2.Conn
+
+	one = make([]byte, 1)
+	_, err = c.Read(one)
+
+	for err != io.EOF {
+		fmt.Println("Waiting for terraform plan to finish")
+		_, err = c.Read(one)
+	}
+
+	// log
+	defer attach2.Close()
+	go io.Copy(os.Stdout, attach2.Reader)
 
 	// sudo docker cp terraform:/app/output.txt
 	contents, _, err := cli.CopyFromContainer(ctx, resp.ID, "/app/output.txt")
