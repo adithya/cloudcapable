@@ -13,8 +13,8 @@ func terraformRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	terraformRunner()
-	w.Write([]byte("plan output\n"))
+	planOutput := terraformRunner()
+	w.Write([]byte(planOutput))
 }
 
 func main() {

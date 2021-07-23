@@ -1,11 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -16,9 +16,7 @@ import (
 	"github.com/docker/docker/client"
 )
 
-func terraformRunner() {
-	tf := []byte("terraform {\n\trequired_providers {\n\t\tdocker = {\n\t\tsource = \"kreuzwerker/docker\"\n\t\t}\n\t}\n\t}\n\n\tprovider \"docker\" {}\n\n\tresource \"docker_image\" \"nginx\" {\n\tname         = \"nginx:latest\"\n\tkeep_locally = false\n\t}\n\n\tresource \"docker_container\" \"nginx\" {\n\timage = docker_image.nginx.latest\n\tname  = \"tutorial\"\n\tports {\n\t\tinternal = 80\n\t\texternal = 8000\n\t}\n\t}\\n")
-
+func terraformRunner() string {
 	ctx := context.Background()
 	cli, err := client.NewEnvClient()
 	if err != nil {
@@ -143,11 +141,13 @@ func terraformRunner() {
 	go io.Copy(os.Stdout, attach2.Reader)
 
 	// sudo docker cp terraform:/app/output.txt
-	contents, _, err := cli.CopyFromContainer(ctx, resp.ID, "/app/output.txt")
+	contents, _, err := cli.CopyFromContainer(ctx, resp.ID, "app/output.txt")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(contents)
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, contents)
+	fmt.Println(buf.String())
 
 	// sudo docker container stop terraform
 	err = cli.ContainerKill(ctx, resp.ID, "KILL")
@@ -170,19 +170,5 @@ func terraformRunner() {
 		panic(err)
 	}
 
-	// statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-	// select {
-	// case err := <-errCh:
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// case <-statusCh:
-	// }
-
-	// out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+	return buf.String()
 }
