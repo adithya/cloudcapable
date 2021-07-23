@@ -108,7 +108,7 @@ func terraformRunner() {
 	fmt.Println(contents)
 
 	// sudo docker container stop terraform
-	err = cli.ContainerStop(ctx, resp.ID, nil)
+	err = cli.ContainerKill(ctx, resp.ID, "KILL")
 	if err != nil {
 		fmt.Printf("Unable to stop container %s", resp.ID)
 		panic(err)
