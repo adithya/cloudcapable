@@ -36,10 +36,13 @@ func terraformRunner() {
 
 	// sudo docker run -d -it --name terraform --entrypoint "/usr/bin/tail" -v /var/run/docker.sock:/var/run/docker.sock -v tfplan-test:/app -w /app hashicorp/terraform:light tail -f /dev/null
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image:      "hashicorp/terraform:light",
-		Entrypoint: []string{"/usr/bin/tail"},
-		WorkingDir: "/app",
-		Cmd:        []string{"tail", "-f", "/dev/null"},
+		Image:        "hashicorp/terraform:light",
+		Entrypoint:   []string{"/usr/bin/tail"},
+		WorkingDir:   "/app",
+		Tty:          true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          []string{},
 	}, &container.HostConfig{
 		Mounts: []mount.Mount{
 			mount.Mount{
