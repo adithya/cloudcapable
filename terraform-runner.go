@@ -149,6 +149,12 @@ func terraformRunner() string {
 	_, err = io.Copy(buf, contents)
 	fmt.Println(buf.String())
 
+	go cleanUp(ctx, cli, resp, err)
+
+	return buf.String()
+}
+
+func cleanUp(ctx context.Context, cli *client.Client, resp container.ContainerCreateCreatedBody, err error) {
 	// sudo docker container stop terraform
 	err = cli.ContainerKill(ctx, resp.ID, "KILL")
 	if err != nil {
@@ -169,6 +175,4 @@ func terraformRunner() string {
 		fmt.Printf("Unable to prune volumes")
 		panic(err)
 	}
-
-	return buf.String()
 }
