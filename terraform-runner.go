@@ -16,11 +16,11 @@ import (
 	"github.com/docker/docker/client"
 )
 
-func terraformRunner() string {
+func terraformRunner() (string, error) {
 	ctx := context.Background()
 	cli, err := client.NewEnvClient()
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	// sudo docker volume create tfplan-test
@@ -28,7 +28,7 @@ func terraformRunner() string {
 
 	reader, err := cli.ImagePull(ctx, "hashicorp/terraform:light", types.ImagePullOptions{})
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	io.Copy(os.Stdout, reader)
 
@@ -55,7 +55,7 @@ func terraformRunner() string {
 		},
 	}, &network.NetworkingConfig{}, nil, "terraform")
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
@@ -73,7 +73,7 @@ func terraformRunner() string {
 	}
 	err = copyToContainer(ctx, cli, options)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	// sudo docker exec -it terraform terraform  init
@@ -85,12 +85,12 @@ func terraformRunner() string {
 		Cmd:          []string{"terraform", "init"},
 	})
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	attach, err := cli.ContainerExecAttach(ctx, execResp.ID, types.ExecStartCheck{})
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	// make sure terraform init finishes before moving on
@@ -117,12 +117,12 @@ func terraformRunner() string {
 		Cmd:          []string{"/bin/sh", "-c", "terraform plan -no-color | tee output.txt"},
 	})
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	attach2, err := cli.ContainerExecAttach(ctx, execResp2.ID, types.ExecStartCheck{})
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	//make sure terraform plan finishes before moving on
@@ -143,7 +143,7 @@ func terraformRunner() string {
 	// sudo docker cp terraform:/app/output.txt
 	contents, _, err := cli.CopyFromContainer(ctx, resp.ID, "app/output.txt")
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, contents)
@@ -151,7 +151,7 @@ func terraformRunner() string {
 
 	go cleanUp(ctx, cli, resp, err)
 
-	return buf.String()
+	return buf.String(), nil
 }
 
 func cleanUp(ctx context.Context, cli *client.Client, resp container.ContainerCreateCreatedBody, err error) {

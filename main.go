@@ -13,7 +13,13 @@ func terraformRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	planOutput := terraformRunner()
+	planOutput, err := terraformRunner()
+
+	// just panic for now
+	if err != nil {
+		panic(err)
+	}
+
 	w.Write([]byte(planOutput))
 }
 
