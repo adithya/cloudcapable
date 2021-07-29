@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	volumeTypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/google/uuid"
 )
 
 func terraformRunner(terraformInput string) (string, error) {
@@ -23,8 +24,10 @@ func terraformRunner(terraformInput string) (string, error) {
 		return "", err
 	}
 
+	evalSessionUUID := uuid.New().String()
+
 	// sudo docker volume create tfplan-test
-	vol, err := cli.VolumeCreate(ctx, volumeTypes.VolumeCreateBody{Name: "tfplan-test"})
+	vol, err := cli.VolumeCreate(ctx, volumeTypes.VolumeCreateBody{Name: evalSessionUUID})
 
 	reader, err := cli.ImagePull(ctx, "hashicorp/terraform:light", types.ImagePullOptions{})
 	if err != nil {
@@ -53,7 +56,7 @@ func terraformRunner(terraformInput string) (string, error) {
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock",
 		},
-	}, &network.NetworkingConfig{}, nil, "terraform")
+	}, &network.NetworkingConfig{}, nil, evalSessionUUID)
 	if err != nil {
 		return "", err
 	}
