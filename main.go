@@ -13,7 +13,8 @@ func terraformRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	planOutput, err := terraformRunner()
+	terraformInput := r.PostFormValue("terraformInput")
+	planOutput, err := terraformRunner(terraformInput)
 
 	// just panic for now
 	if err != nil {

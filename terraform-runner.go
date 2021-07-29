@@ -16,7 +16,7 @@ import (
 	"github.com/docker/docker/client"
 )
 
-func terraformRunner() (string, error) {
+func terraformRunner(terraformInput string) (string, error) {
 	ctx := context.Background()
 	cli, err := client.NewEnvClient()
 	if err != nil {
@@ -64,14 +64,13 @@ func terraformRunner() (string, error) {
 
 	// sudo docker cp main.tf terraform:/app
 	options := cpConfig{
-		followLink: false,
 		copyUIDGID: false,
 		quiet:      false,
-		sourcePath: "terraformTestFiles/docker-nginx.tf",
 		destPath:   "app",
 		container:  resp.ID,
 	}
-	err = copyToContainer(ctx, cli, options)
+
+	err = copyStringToContainer(ctx, cli, options, terraformInput)
 	if err != nil {
 		return "", err
 	}
