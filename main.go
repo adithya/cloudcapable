@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/cloudcapable/terraformrunner"
 	"net/http"
 	"time"
 )
@@ -14,7 +15,7 @@ func terraformRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	terraformInput := r.PostFormValue("terraformInput")
-	planOutput, err := terraformRunner(terraformInput)
+	planOutput, err := terraformrunner.TerraformRunner(terraformInput)
 
 	// just panic for now
 	if err != nil {

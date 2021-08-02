@@ -1,4 +1,4 @@
-package main
+package terraformrunner
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cloudcapable/dockerutils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -17,7 +18,8 @@ import (
 	"github.com/google/uuid"
 )
 
-func terraformRunner(terraformInput string) (string, error) {
+// TerraformRunner is a function
+func TerraformRunner(terraformInput string) (string, error) {
 	ctx := context.Background()
 	cli, err := client.NewEnvClient()
 	if err != nil {
@@ -66,14 +68,14 @@ func terraformRunner(terraformInput string) (string, error) {
 	}
 
 	// sudo docker cp main.tf terraform:/app
-	options := cpConfig{
-		copyUIDGID: false,
-		quiet:      false,
-		destPath:   "app",
-		container:  resp.ID,
+	options := dockerutils.CpConfig{
+		CopyUIDGID: false,
+		Quiet:      false,
+		DestPath:   "app",
+		Container:  resp.ID,
 	}
 
-	err = copyStringToContainer(ctx, cli, options, terraformInput)
+	err = dockerutils.CopyStringToContainer(ctx, cli, options, terraformInput)
 	if err != nil {
 		return "", err
 	}

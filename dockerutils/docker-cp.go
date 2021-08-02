@@ -1,7 +1,8 @@
+package dockerutils
+
 // CODE IS NOT ORGINALLY MINE, MODIFIED SOME OF IT
 // SOURCE: https://github.com/docker/cli/blob/master/cli/command/container/cp.go
 // SOURCE PROJECT: https://github.com/docker/cli
-package main
 
 import (
 	"archive/tar"
@@ -36,13 +37,14 @@ type ClientInfo struct {
 	DefaultVersion  string
 }
 
-type cpConfig struct {
-	followLink bool
-	copyUIDGID bool
-	quiet      bool
-	sourcePath string
-	destPath   string
-	container  string
+// CpConfig is a struct
+type CpConfig struct {
+	FollowLink bool
+	CopyUIDGID bool
+	Quiet      bool
+	SourcePath string
+	DestPath   string
+	Container  string
 }
 
 // ConfigFile is a filename and the contents of the file as a Dict
@@ -58,13 +60,14 @@ func resolveLocalPath(localPath string) (absPath string, err error) {
 	return archive.PreserveTrailingDotOrSeparator(absPath, localPath, filepath.Separator), nil
 }
 
-func copyStringToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfig, terraformInput string) (err error) {
-	dstPath := copyConfig.destPath
+// CopyStringToContainer is a function
+func CopyStringToContainer(ctx context.Context, cli *client.Client, copyConfig CpConfig, terraformInput string) (err error) {
+	dstPath := copyConfig.DestPath
 
 	client := cli
 	// Prepare destination copy info by stat-ing the container path.
 	dstInfo := archive.CopyInfo{Path: dstPath}
-	dstStat, err := client.ContainerStatPath(ctx, copyConfig.container, dstPath)
+	dstStat, err := client.ContainerStatPath(ctx, copyConfig.Container, dstPath)
 
 	// If the destination is a symbolic link, we should evaluate it.
 	if err == nil && dstStat.Mode&os.ModeSymlink != 0 {
@@ -76,12 +79,12 @@ func copyStringToContainer(ctx context.Context, cli *client.Client, copyConfig c
 		}
 
 		dstInfo.Path = linkTarget
-		dstStat, err = client.ContainerStatPath(ctx, copyConfig.container, linkTarget)
+		dstStat, err = client.ContainerStatPath(ctx, copyConfig.Container, linkTarget)
 	}
 
 	// Validate the destination path
 	if err := command.ValidateOutputPathFileMode(dstStat.Mode); err != nil {
-		return errors.Wrapf(err, `destination "%s:%s" must be a directory or a regular file`, copyConfig.container, dstPath)
+		return errors.Wrapf(err, `destination "%s:%s" must be a directory or a regular file`, copyConfig.Container, dstPath)
 	}
 
 	// Ignore any error and assume that the parent directory of the destination
@@ -154,14 +157,14 @@ func copyStringToContainer(ctx context.Context, cli *client.Client, copyConfig c
 
 	options := types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: false,
-		CopyUIDGID:                copyConfig.copyUIDGID,
+		CopyUIDGID:                copyConfig.CopyUIDGID,
 	}
 
-	if copyConfig.quiet {
-		return client.CopyToContainer(ctx, copyConfig.container, resolvedDstPath, content, options)
+	if copyConfig.Quiet {
+		return client.CopyToContainer(ctx, copyConfig.Container, resolvedDstPath, content, options)
 	}
 
-	res := client.CopyToContainer(ctx, copyConfig.container, resolvedDstPath, content, options)
+	res := client.CopyToContainer(ctx, copyConfig.Container, resolvedDstPath, content, options)
 
 	return res
 }
@@ -173,12 +176,12 @@ func copyStringToContainer(ctx context.Context, cli *client.Client, copyConfig c
 // 	copyUIDGID: false,
 // 	quiet:      false,
 // 	sourcePath: "terraformTestFiles/docker-nginx.tf",
-// 	destPath:   "app",
+// 	DestPath:   "app",
 // 	container:  resp.ID,
 // }
-func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfig) (err error) {
-	srcPath := copyConfig.sourcePath
-	dstPath := copyConfig.destPath
+func copyToContainer(ctx context.Context, cli *client.Client, copyConfig CpConfig) (err error) {
+	srcPath := copyConfig.SourcePath
+	dstPath := copyConfig.DestPath
 
 	if srcPath != "-" {
 		// Get an absolute source path.
@@ -191,7 +194,7 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 	client := cli
 	// Prepare destination copy info by stat-ing the container path.
 	dstInfo := archive.CopyInfo{Path: dstPath}
-	dstStat, err := client.ContainerStatPath(ctx, copyConfig.container, dstPath)
+	dstStat, err := client.ContainerStatPath(ctx, copyConfig.Container, dstPath)
 
 	// If the destination is a symbolic link, we should evaluate it.
 	if err == nil && dstStat.Mode&os.ModeSymlink != 0 {
@@ -203,12 +206,12 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 		}
 
 		dstInfo.Path = linkTarget
-		dstStat, err = client.ContainerStatPath(ctx, copyConfig.container, linkTarget)
+		dstStat, err = client.ContainerStatPath(ctx, copyConfig.Container, linkTarget)
 	}
 
 	// Validate the destination path
 	if err := command.ValidateOutputPathFileMode(dstStat.Mode); err != nil {
-		return errors.Wrapf(err, `destination "%s:%s" must be a directory or a regular file`, copyConfig.container, dstPath)
+		return errors.Wrapf(err, `destination "%s:%s" must be a directory or a regular file`, copyConfig.Container, dstPath)
 	}
 
 	// Ignore any error and assume that the parent directory of the destination
@@ -231,11 +234,11 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 		content = os.Stdin
 		resolvedDstPath = dstInfo.Path
 		if !dstInfo.IsDir {
-			return errors.Errorf("destination \"%s:%s\" must be a directory", copyConfig.container, dstPath)
+			return errors.Errorf("destination \"%s:%s\" must be a directory", copyConfig.Container, dstPath)
 		}
 	} else {
 		// Prepare source copy info.
-		srcInfo, err := archive.CopyInfoSourcePath(srcPath, copyConfig.followLink)
+		srcInfo, err := archive.CopyInfoSourcePath(srcPath, copyConfig.FollowLink)
 		if err != nil {
 			return err
 		}
@@ -270,14 +273,14 @@ func copyToContainer(ctx context.Context, cli *client.Client, copyConfig cpConfi
 
 	options := types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: false,
-		CopyUIDGID:                copyConfig.copyUIDGID,
+		CopyUIDGID:                copyConfig.CopyUIDGID,
 	}
 
-	if copyConfig.quiet {
-		return client.CopyToContainer(ctx, copyConfig.container, resolvedDstPath, content, options)
+	if copyConfig.Quiet {
+		return client.CopyToContainer(ctx, copyConfig.Container, resolvedDstPath, content, options)
 	}
 
-	res := client.CopyToContainer(ctx, copyConfig.container, resolvedDstPath, content, options)
+	res := client.CopyToContainer(ctx, copyConfig.Container, resolvedDstPath, content, options)
 
 	return res
 }
