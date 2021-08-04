@@ -32,6 +32,11 @@ func Test_terraformRunner(t *testing.T) {
 	`
 	planOutput, _ := TerraformRunner(terraformInput)
 
+	fileHeaderString := "output.txt"
+	if strings.Contains(planOutput, fileHeaderString) {
+		t.Error("endpoint returning file header")
+	}
+
 	planGenString := "Terraform used the selected providers to generate the following execution"
 	if !strings.Contains(planOutput, planGenString) {
 		t.Error("plan not generated")
