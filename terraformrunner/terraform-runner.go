@@ -151,11 +151,23 @@ func TerraformRunner(terraformInput string) (string, error) {
 	}
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, contents)
-	fmt.Println(buf.String())
 
+	terraformPlan := removeFileInformationFromPlan(buf.String())
 	go cleanUp(ctx, cli, resp, err)
 
-	return buf.String(), nil
+	return terraformPlan, nil
+}
+
+func removeFileInformationFromPlan(rawPlan string) string {
+	terraformPlan := ""
+	lines := strings.Split(rawPlan, "\n")
+	for index, line := range lines {
+		if index > 0 && index != len(lines)-1 {
+			terraformPlan += line + "\n"
+		}
+	}
+
+	return terraformPlan
 }
 
 func cleanUp(ctx context.Context, cli *client.Client, resp container.ContainerCreateCreatedBody, err error) {
